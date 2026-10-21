@@ -1,22 +1,36 @@
 ---
 ########## FirewallD Setup  ##########
-- name: Remove UFW is removed on Debian systems.
+- name: Remove UFW is removed on Debian systems
   ansible.builtin.package:
     name: ufw
     state: absent
   when: ansible_os_family == "Debian"
 
-- name: Install Pre-Req python3-firewall is installed on Debian systems.
+- name: Update apt cache (Debian)
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install Pre-Req python3-firewall (Debian+Suse)
   ansible.builtin.package:
     name:
       - python3-firewall
     state: latest
-  when: ansible_os_family == "Debian"
+  when: ansible_os_family in ["Debian", "Suse"]
 
-- name: Ensure Firewalld is installed and updated.
+- name: Install the latest FirewallD (RHEL+Debian+Suse)
   ansible.builtin.package:
     name: firewalld
     state: latest
+  when:
+    - ansible_os_family in ["RedHat", "Debian", "Suse"]
+    - ansible_distribution != "Fedora"
+
+- name: Ensure Firewalld is installed and updated.
+  ansible.builtin.command: dnf -y install firewalld
+  changed_when: false
+  when: ansible_distribution == "Fedora"
 
 - name: Configure FirewallD Open Ports
   ansible.posix.firewalld:
@@ -38,7 +52,7 @@
   loop: "{{ fw_services }}"
   register: services_set
 
-- name: Enable FirewallD
+- name: Ensure FirewallD is enabled
   ansible.builtin.service:
     name: firewalld
     enabled: yes

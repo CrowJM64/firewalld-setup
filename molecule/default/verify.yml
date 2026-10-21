@@ -2,9 +2,35 @@
 # Purpose: assert that the instance really ended up in the expected state.
 # Molecule calls this playbook with `molecule verify`.
 - name: Verify
-  hosts: instance
-  gather_facts: false # Quicker, if you do not need facts
+  hosts: all
+  gather_facts: true
+  vars:
+    expected_ports: "22/tcp"
+    expected_services: "ssh"
   tasks:
-    - name: Assert something
-      ansible.builtin.assert:
-        that: true
+    - name: Check Firewalld service is running
+      ansible.builtin.systemd:
+        name: firewalld
+      register: firewalld_svc
+      failed_when: firewalld_svc.status.ActiveState != "active"
+#      when: ansible_os_family == "RedHat"
+
+#    - name: Get ansible user info
+#      ansible.builtin.getent:
+#        database: passwd
+#        key: ansible
+
+#    - name: Get group memberships
+#      ansible.builtin.command: id -nG ansible
+#      register: ansible_groups
+#      changed_when: false
+
+#    - name: Assert ansible user is an admin
+#      ansible.builtin.assert:
+#        that: >-
+#          ('wheel' if ansible_os_family == 'RedHat' else 'sudo') in ansible_groups.stdout.split()
+#        fail_msg: "ansible is only in: {{ ansible_groups.stdout }}"
+
+#    - name: Check authorized_keys contains the test key
+#      ansible.builtin.command: grep -q molecule-test /home/ansible/.ssh/authorized_keys
+#      changed_when: false

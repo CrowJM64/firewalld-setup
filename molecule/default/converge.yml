@@ -3,7 +3,12 @@
 # Molecule calls this playbook with `molecule converge`.
 - name: Converge
   hosts: all
-  gather_facts: true # Disable if your role does not rely on facts
+  gather_facts: true
+  vars:
+     fw_ports:
+      - 22/tcp
+     fw_services:
+      - ssh
   tasks:
     - name: Include firewalld-setup
       ansible.builtin.include_role:

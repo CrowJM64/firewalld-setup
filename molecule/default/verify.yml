@@ -13,7 +13,26 @@
         name: firewalld
       register: firewalld_svc
       failed_when: firewalld_svc.status.ActiveState != "active"
-#      when: ansible_os_family == "RedHat"
+
+    - name: Get Open Ports
+      ansible.builtin.command:  firewall-cmd --list-ports
+      register: open_ports
+
+    - name: Get Open Services
+      ansible.builtin.command:  firewall-cmd --list-services
+      register: open_services
+
+    - name: Assert 22/tcp is open
+      ansible.builtin.assert:
+        that: >-
+          "'22/tcp' in open_ports.stdout"
+        fail_msg: "22/tcp missing from open_ports"
+
+    - name: Assert ssh service is open
+      ansible.builtin.assert:
+        that: >-
+          "'ssh' in open_services.stdout"
+        fail_msg: "ssh missing from open_services"
 
 #    - name: Get ansible user info
 #      ansible.builtin.getent:

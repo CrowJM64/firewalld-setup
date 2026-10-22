@@ -4,33 +4,33 @@
   ansible.builtin.package:
     name: ufw
     state: absent
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] in ["Debian"]
 
 - name: Update apt cache (Debian)
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 3600
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] in ["Debian"]
 
 - name: Install Pre-Req python3-firewall (Debian+Suse)
   ansible.builtin.package:
     name:
       - python3-firewall
     state: latest
-  when: ansible_os_family in ["Debian", "Suse"]
+  when: ansible_facts['os_family'] in ["Debian", "Suse"]
 
 - name: Install the latest FirewallD (RHEL+Debian+Suse)
   ansible.builtin.package:
     name: firewalld
     state: latest
   when:
-    - ansible_os_family in ["RedHat", "Debian", "Suse"]
-    - ansible_distribution != "Fedora"
+    - ansible_facts['os_family'] in ["RedHat", "Debian", "Suse"]
+    - ansible_facts['distribution'] != "Fedora"
 
 - name: Ensure Firewalld is installed and updated.
   ansible.builtin.command: dnf -y install firewalld
   changed_when: false
-  when: ansible_distribution == "Fedora"
+  when: ansible_facts['distribution'] == "Fedora"
 
 - name: Configure FirewallD Open Ports
   ansible.posix.firewalld:

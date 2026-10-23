@@ -22,34 +22,14 @@
       ansible.builtin.command:  firewall-cmd --list-services
       register: open_services
 
-    - name: Assert 22/tcp is open
+    - name: Assert expected port is open
       ansible.builtin.assert:
-        that: >-
-          "'22/tcp' in open_ports.stdout"
-        fail_msg: "22/tcp missing from open_ports"
+        that: >
+          '{{ expected_ports }}' in open_ports.stdout
+        fail_msg: "'{{ expected_ports }}' missing from open_ports"
 
-    - name: Assert ssh service is open
+    - name: Assert expected service is open
       ansible.builtin.assert:
-        that: >-
-          "'ssh' in open_services.stdout"
-        fail_msg: "ssh missing from open_services"
-
-#    - name: Get ansible user info
-#      ansible.builtin.getent:
-#        database: passwd
-#        key: ansible
-
-#    - name: Get group memberships
-#      ansible.builtin.command: id -nG ansible
-#      register: ansible_groups
-#      changed_when: false
-
-#    - name: Assert ansible user is an admin
-#      ansible.builtin.assert:
-#        that: >-
-#          ('wheel' if ansible_os_family == 'RedHat' else 'sudo') in ansible_groups.stdout.split()
-#        fail_msg: "ansible is only in: {{ ansible_groups.stdout }}"
-
-#    - name: Check authorized_keys contains the test key
-#      ansible.builtin.command: grep -q molecule-test /home/ansible/.ssh/authorized_keys
-#      changed_when: false
+        that: >
+          '{{ expected_services }}' in open_services.stdout
+        fail_msg: "'{{ expected_services }}' missing from open_services"

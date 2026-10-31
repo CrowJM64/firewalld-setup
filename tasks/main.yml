@@ -1,9 +1,16 @@
 ---
 ########## FirewallD Setup  ##########
-- name: Remove UFW is removed.
-  ansible.builtin.package:
+- name: Disable UFW
+  ansible.builtin.service:
     name: ufw
-    state: absent
+    enabled: false
+  when: ansible_facts['os_family'] in ["Debian"]
+
+- name: Stop UFW
+  ansible.builtin.service:
+    name: ufw
+    state: stopped
+  when: ansible_facts['os_family'] in ["Debian"]
 
 - name: Update apt cache (Debian)
   ansible.builtin.apt:
@@ -11,54 +18,102 @@
     cache_valid_time: 3600
   when: ansible_facts['os_family'] in ["Debian"]
 
-- name: Install Pre-Req python3-firewall (Debian+Suse)
+- name: Install Pre-Req python3-firewall (Debian)
   ansible.builtin.package:
     name:
       - python3-firewall
     state: latest
-  when: ansible_facts['os_family'] in ["Debian", "Suse"]
-
-- name: Install the latest FirewallD (RHEL+Debian+Suse)
-  ansible.builtin.package:
-    name: firewalld
-    state: latest
   when:
-    - ansible_facts['os_family'] in ["RedHat", "Debian", "Suse"]
-    - ansible_facts['distribution'] != "Fedora"
+    - ansible_facts['os_family'] == "Debian"
 
-- name: Ensure Firewalld is installed and updated.
-  ansible.builtin.command: dnf -y install firewalld
-  changed_when: false
-  when: ansible_facts['distribution'] == "Fedora"
+- name: FirewallD installation
+  block:
+    - name: Install the latest FirewallD
+      ansible.builtin.package:
+        name: firewalld
+        state: latest
+      when:
+        - ansible_facts['os_family'] in ["RedHat", "Debian", "Suse"]
 
-- name: Configure FirewallD Open Ports
-  ansible.posix.firewalld:
-    port: "{{ item }}"
-    state: enabled
-    permanent: true
-    immediate: false
-    offline: true
-  loop: "{{ fw_ports }}"
-  register: ports_set
+    - name: Start Firewalld
+      ansible.builtin.service:
+        name: firewalld
+        state: started
 
-- name: Configure FirewallD Open Services
-  ansible.posix.firewalld:
-    service: "{{ item }}"
-    state: enabled
-    permanent: true
-    immediate: false
-    offline: true
-  loop: "{{ fw_services }}"
-  register: services_set
+    - name: Configure FirewallD Open Ports
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        state: enabled
+        permanent: true
+        immediate: false
+        offline: true
+      loop: "{{ fw_ports }}"
+      register: ports_set
+      when: ansible_facts['os_family'] != "Suse"
 
-- name: Ensure FirewallD is enabled
-  ansible.builtin.service:
-    name: firewalld
-    enabled: yes
+    - name: Configure FirewallD Open Services
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        state: enabled
+        permanent: true
+        immediate: false
+        offline: true
+      loop: "{{ fw_services }}"
+      register: services_set
+      when: ansible_facts['os_family'] != "Suse"
 
-- name: Restart FirewallD With Changes
-  ansible.builtin.service:
-    name: firewalld
-    state: restarted
-  when:
-    - ports_set is changed or services_set is changed
+    - name: Configure FirewallD Open Services (SUSE)
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --add-port={{ item }}
+      loop: "{{ fw_ports }}"
+      register: ports_set
+      when: ansible_facts['os_family'] == "Suse"
+
+    - name: Configure FirewallD Open Services (SUSE)
+      ansible.builtin.command:
+        cmd: firewall-cmd --permanent --add-service={{ item }}
+      loop: "{{ fw_services }}"
+      register: services_set
+      when: ansible_facts['os_family'] == "Suse"
+
+    - name: Ensure FirewallD is enabled
+      ansible.builtin.service:
+        name: firewalld
+        enabled: yes
+
+    - name: Restart FirewallD With Changes
+      ansible.builtin.service:
+        name: firewalld
+        state: restarted
+      when:
+        - ports_set is changed or services_set is changed
+
+#    - name: Force a failure to trigger the rescue
+#      ansible.builtin.fail:
+#        msg: "Intentional failure to test rescue logic"
+#      register: expected_failure
+#      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Remove UFW
+      ansible.builtin.package:
+        name: ufw
+        state: absent
+
+  rescue:
+    - name: Rollback Changes - Remove FirewallD
+      ansible.builtin.package:
+        name: firewalld
+        state: absent
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Rollback Changes - Reenable UFW
+      ansible.builtin.service:
+        name: ufw
+        enabled: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Rollback Changes - Start UFW
+      ansible.builtin.service:
+        name: ufw
+        state: restarted
+      when: ansible_facts['os_family'] == "Debian"

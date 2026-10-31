@@ -26,10 +26,12 @@
       ansible.builtin.assert:
         that: >
           '{{ expected_ports }}' in open_ports.stdout
-        fail_msg: "'{{ expected_ports }}' missing from open_ports"
+        success_msg: "'{{ expected_ports }}' was found in open_ports."
+        fail_msg: "'{{ expected_ports }}' missing from open_ports. Open ports are '{{ open_ports.stdout }}'"
 
     - name: Assert expected service is open
       ansible.builtin.assert:
         that: >
           '{{ expected_services }}' in open_services.stdout
-        fail_msg: "'{{ expected_services }}' missing from open_services"
+        success_msg: "'{{ expected_services }}' was found in open_ports."
+        fail_msg: "'{{ expected_services }}' missing from open_services. Open services are '{{ open_services.stdout }}'"

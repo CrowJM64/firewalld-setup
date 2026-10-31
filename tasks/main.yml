@@ -28,12 +28,19 @@
 
 - name: FirewallD installation
   block:
-    - name: Install the latest FirewallD
+    - name: Install FirewallD
       ansible.builtin.package:
         name: firewalld
-        state: latest
+        state: present
       when:
-        - ansible_facts['os_family'] in ["RedHat", "Debian", "Suse"]
+        - ansible_facts['os_family'] in ["RedHat", "Debian"]
+
+    - name: Install FirewallD (Suse)
+      community.general.zypper:
+        name: firewalld
+        state: present
+        install_recommends: true
+      when: ansible_facts['os_family'] == "Suse"
 
     - name: Start Firewalld
       ansible.builtin.service:

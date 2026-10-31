@@ -23,3 +23,8 @@
           - ufw
         state: latest
       when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install pre-req python3-dnf (Fedora)
+      ansible.builtin.command: dnf -y install python3-dnf
+      changed_when: false
+      when: ansible_facts['distribution'] == "Fedora"

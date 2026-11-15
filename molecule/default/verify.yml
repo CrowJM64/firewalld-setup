@@ -7,6 +7,8 @@
   vars:
     expected_ports: "22/tcp"
     expected_services: "ssh"
+    expected_rich_rule: 'rule priority="10" family="ipv4" source address="10.0.1.15/32" service name="ssh" accept'
+
   tasks:
     - name: Check Firewalld service is running
       ansible.builtin.systemd:
@@ -15,23 +17,31 @@
       failed_when: firewalld_svc.status.ActiveState != "active"
 
     - name: Get Open Ports
-      ansible.builtin.command:  firewall-cmd --list-ports
+      ansible.builtin.command: firewall-offline-cmd --list-ports
       register: open_ports
 
     - name: Get Open Services
-      ansible.builtin.command:  firewall-cmd --list-services
+      ansible.builtin.command: firewall-offline-cmd --list-services
       register: open_services
+
+    - name: Get Open Rich Rules
+      ansible.builtin.command: firewall-offline-cmd --list-rich-rules
+      register: open_rich_rules
 
     - name: Assert expected port is open
       ansible.builtin.assert:
-        that: >
-          '{{ expected_ports }}' in open_ports.stdout
-        success_msg: "'{{ expected_ports }}' was found in open_ports."
+        that: '"{{ expected_ports }}" in open_ports.stdout'
+        success_msg: "'{{ expected_ports }}' was found in open_services."
         fail_msg: "'{{ expected_ports }}' missing from open_ports. Open ports are '{{ open_ports.stdout }}'"
 
     - name: Assert expected service is open
       ansible.builtin.assert:
-        that: >
-          '{{ expected_services }}' in open_services.stdout
+        that: '"{{ expected_services }}" in open_services.stdout'
         success_msg: "'{{ expected_services }}' was found in open_ports."
         fail_msg: "'{{ expected_services }}' missing from open_services. Open services are '{{ open_services.stdout }}'"
+
+    - name: Assert expected rich rules are open
+      ansible.builtin.assert:
+        that: '"{{ expected_rich_rule }}" in open_rich_rules.stdout'
+        success_msg: "'{{ expected_rich_rule }}' was found in open_rich_rules."
+        fail_msg: "'{{ expected_rich_rule }}' missing from open_rich_rules. Open rich rules are '{{ open_rich_rules.stdout }}'"

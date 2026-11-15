@@ -35,17 +35,15 @@
       when:
         - ansible_facts['os_family'] in ["RedHat", "Debian"]
 
-    - name: Install FirewallD (Suse)
-      community.general.zypper:
-        name: firewalld
-        state: present
-        install_recommends: true
-      when: ansible_facts['os_family'] == "Suse"
-
     - name: Start Firewalld
       ansible.builtin.service:
         name: firewalld
         state: started
+
+    - name: Ensure FirewallD is enabled
+      ansible.builtin.service:
+        name: firewalld
+        enabled: yes
 
     - name: Configure FirewallD Open Ports
       ansible.posix.firewalld:
@@ -56,7 +54,6 @@
         offline: true
       loop: "{{ fw_ports }}"
       register: ports_set
-      when: ansible_facts['os_family'] != "Suse"
 
     - name: Configure FirewallD Open Services
       ansible.posix.firewalld:
@@ -67,33 +64,22 @@
         offline: true
       loop: "{{ fw_services }}"
       register: services_set
-      when: ansible_facts['os_family'] != "Suse"
 
-    - name: Configure FirewallD Open Services (SUSE)
-      ansible.builtin.command:
-        cmd: firewall-cmd --permanent --add-port={{ item }}
-      loop: "{{ fw_ports }}"
-      register: ports_set
-      when: ansible_facts['os_family'] == "Suse"
+    - name: Configure FirewallD Rich Rules 
+      ansible.posix.firewalld:
+        rich_rule: "{{ item }}"
+        state: enabled
+        permanent: true
+        immediate: false
+      loop: "{{ rich_rules }}"
+      register: rich_rules_set
 
-    - name: Configure FirewallD Open Services (SUSE)
-      ansible.builtin.command:
-        cmd: firewall-cmd --permanent --add-service={{ item }}
-      loop: "{{ fw_services }}"
-      register: services_set
-      when: ansible_facts['os_family'] == "Suse"
-
-    - name: Ensure FirewallD is enabled
+    - name: Reload FirewallD With Changes
       ansible.builtin.service:
         name: firewalld
-        enabled: yes
-
-    - name: Restart FirewallD With Changes
-      ansible.builtin.service:
-        name: firewalld
-        state: restarted
+        state: reloaded
       when:
-        - ports_set is changed or services_set is changed
+        - ports_set is changed or services_set is changed or rich_rules_set is changed
 
 #    - name: Force a failure to trigger the rescue
 #      ansible.builtin.fail:

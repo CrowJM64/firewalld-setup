@@ -7,3 +7,10 @@ fw_ports:
 # Services to allow through FirewallD
 fw_services:
   - ssh
+
+# Rich rules to allow through FirewallD. Lower number = higher precedence (10 overrides 100)
+rich_rules:
+  - 'rule priority="10" family="ipv4" source address="10.0.1.15/32" service name="ssh" accept'
+  - 'rule priority="100" family="ipv4" source address="10.0.1.0/24" service name="ssh" drop'
+  - 'rule priority="10" family="ipv4" source address="10.0.10.30/32" port port="9090" protocol="tcp" accept'
+  - 'rule priority="100" family="ipv4" source address="10.0.10.0/24" port port="9090" protocol="tcp" drop'

@@ -30,7 +30,6 @@ Debian 13,12
 
 # Other
 AmazonLinux 2027,2023
-OpenSuse Leap 15
 ```
 
 ## Example Playbook

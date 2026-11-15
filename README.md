@@ -10,6 +10,7 @@ This Ansible role installs FirewallD and removes UFW, adding SSH to the allowlis
 - Ensures FirewallD is both installed and up to date.
 - Allows the requested ports.
 - Allows the requested services.
+- Applies the requested rich rules.
 - Ensures FirewallD is enabled and restarts it.
 ```
 
